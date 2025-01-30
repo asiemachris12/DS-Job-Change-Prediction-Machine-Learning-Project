@@ -10,6 +10,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     vim \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Docker
+RUN mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -17,18 +29,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application files 
+# Install JupyterLab and Python kernel
+RUN pip install jupyterlab ipykernel \
+    && python -m ipykernel install --user --name=python3 --display-name "Python 3"
+
+
+# Copy the rest of the application files
 COPY . /app
 
-# Install JupyterLab (optional but common in data science workflows)
-RUN pip install jupyterlab
-
 # Add a non-root user for better security
-RUN useradd -ms /bin/bash vscode
+RUN useradd -ms /bin/bash vscode \
+    && usermod -aG docker vscode  # Add user to the docker group to run Docker commands without sudo
 USER vscode
 
 # Expose port for JupyterLab
-EXPOSE 8888:8888
+EXPOSE 8888
 
 # Default command
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--no-browser"]

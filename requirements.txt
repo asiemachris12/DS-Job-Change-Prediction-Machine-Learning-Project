@@ -18,3 +18,4 @@ azure.ai.ml
 azure.identity
 python-dotenv
 azure.keyvault.secrets
+imblearn
